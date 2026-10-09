@@ -52,3 +52,9 @@ class Rating {
   /// Classroom Comfort Score = sum of the 6 ratings / 6
   double get overallScore => calculateScore(scores);
 }
+
+class TrendPoint {
+  final int x; // days since the start of the chart window
+  final double value; // average score on that day
+  const TrendPoint({required this.x, required this.value});
+}

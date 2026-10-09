@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/models.dart';
 import '../services/data_service.dart';
 import '../utils/score_utils.dart';
+import '../widgets/charts.dart';
 import '../widgets/widgets.dart';
 import 'rate_classroom_screen.dart';
 
@@ -20,14 +21,14 @@ class ClassroomDetailScreen extends StatelessWidget {
       appBar: AppBar(title: Text(classroom.fullName)),
       floatingActionButton: isStudent
           ? FloatingActionButton.extended(
-              icon: const Icon(Icons.star),
-              label: const Text('Rate this room'),
-              onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => RateClassroomScreen(classroom: classroom),
-                ),
-              ),
-            )
+        icon: const Icon(Icons.star),
+        label: const Text('Rate this room'),
+        onPressed: () => Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => RateClassroomScreen(classroom: classroom),
+          ),
+        ),
+      )
           : null,
       body: ListenableBuilder(
         listenable: dataService,
@@ -75,6 +76,12 @@ class ClassroomDetailScreen extends StatelessWidget {
               Text('Category ratings', style: textTheme.titleLarge),
               const SizedBox(height: 8),
               FactorBars(averages: dataService.factorAverages(classroom.id)),
+              const SizedBox(height: 16),
+              Text('Score trend (last $trendDays days)', style: textTheme.titleLarge),
+              const SizedBox(height: 8),
+              TrendSection(
+                pointsFor: (factor) => dataService.trendFor(classroom.id, factor: factor),
+              ),
               const SizedBox(height: 16),
               Text('Student feedback', style: textTheme.titleLarge),
               if (comments.isEmpty)

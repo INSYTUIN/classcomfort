@@ -345,6 +345,40 @@ class DataService extends ChangeNotifier {
   List<Rating> recentFeedback({int limit = 5}) =>
       _withComments(_activeRatings).take(limit).toList();
 
+  // ---------- Trends over time ----------
+
+  /// Average score per day for the last [days] days. Days with no ratings are
+  /// skipped. [factor] = null means the overall comfort score.
+  List<TrendPoint> _dailyAverages(List<Rating> list, String? factor, int days) {
+    final now = DateTime.now();
+    final start = DateTime.utc(now.year, now.month, now.day - (days - 1));
+    final byDay = <int, List<double>>{};
+
+    for (final r in list) {
+      final d = r.createdAt;
+      final x = DateTime.utc(d.year, d.month, d.day).difference(start).inDays;
+      if (x < 0 || x >= days) continue; // outside the chart window
+      final value = factor == null ? r.overallScore : r.scores[factor]!.toDouble();
+      byDay.putIfAbsent(x, () => []).add(value);
+    }
+
+    return byDay.entries
+        .map((e) => TrendPoint(
+      x: e.key,
+      value: e.value.reduce((a, b) => a + b) / e.value.length,
+    ))
+        .toList()
+      ..sort((a, b) => a.x.compareTo(b.x));
+  }
+
+  /// Daily trend for one classroom.
+  List<TrendPoint> trendFor(String classroomId, {String? factor, int days = trendDays}) =>
+      _dailyAverages(ratingsFor(classroomId), factor, days);
+
+  /// Daily trend across all classrooms.
+  List<TrendPoint> campusTrend({String? factor, int days = trendDays}) =>
+      _dailyAverages(_activeRatings, factor, days);
+
   // ---------- Dashboard statistics ----------
 
   int get totalClassrooms => _classrooms.length;

@@ -1,0 +1,65 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Signed in AND has clicked the link in the verification email
+    function verified() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+
+    // Verified AND the role saved in users/{uid} is "admin"
+    function isAdmin() {
+      return verified()
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    function validScore(v) {
+      return v is int && v >= 1 && v <= 5;
+    }
+
+    function validScores(s) {
+      return s is map
+        && s.keys().hasOnly(['Temperature', 'Lighting', 'Noise', 'Seating', 'Ventilation', 'Internet'])
+        && validScore(s.Temperature)
+        && validScore(s.Lighting)
+        && validScore(s.Noise)
+        && validScore(s.Seating)
+        && validScore(s.Ventilation)
+        && validScore(s.Internet);
+    }
+
+    // Each user has one profile document that stores their role.
+    // The app can only create it as "student". Nobody can change a role from
+    // the app, so admins are set by hand in the Firebase console.
+    match /users/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow create: if request.auth != null
+                    && request.auth.uid == uid
+                    && request.resource.data.keys().hasOnly(['role'])
+                    && request.resource.data.role == 'student';
+      allow update, delete: if false;
+    }
+
+    // Everyone verified can read classrooms. Only admins can add/remove them.
+    match /classrooms/{classroomId} {
+      allow read: if verified();
+      allow write: if isAdmin();
+    }
+
+    // Students can add a rating (as themselves). Nobody can edit one.
+    // Only admins can delete ratings.
+    match /ratings/{ratingId} {
+      allow read: if verified();
+      allow create: if verified()
+                    && request.resource.data.keys().hasOnly(['classroomId', 'userId', 'scores', 'comment', 'createdAt'])
+                    && request.resource.data.userId == request.auth.uid
+                    && validScores(request.resource.data.scores)
+                    && request.resource.data.comment is string
+                    && request.resource.data.comment.size() <= 500
+                    && request.resource.data.createdAt is timestamp
+                    && exists(/databases/$(database)/documents/classrooms/$(request.resource.data.classroomId));
+      allow update: if false;
+      allow delete: if isAdmin();
+    }
+  }
+}

@@ -29,6 +29,7 @@ const Map<int, String> ratingLabels = {
 
 /// A factor whose average is below this value is flagged as a problem area.
 const double problemThreshold = 3.0;
+const int trendDays = 30;
 
 /// Classroom Comfort Score = (sum of all factor ratings) / number of factors.
 double calculateScore(Map<String, int> scores) {

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/models.dart';
 import '../services/data_service.dart';
 import '../utils/score_utils.dart';
+import '../widgets/charts.dart';
 import '../widgets/widgets.dart';
 import 'classroom_detail_screen.dart';
 import 'manage_classrooms_screen.dart';
@@ -96,6 +97,17 @@ class AdminDashboardScreen extends StatelessWidget {
                           ),
                         ),
                       ),
+                    ],
+                  ),
+                  _SectionTitle('Campus trend (last $trendDays days)'),
+                  TrendSection(
+                    pointsFor: (factor) => dataService.campusTrend(factor: factor),
+                  ),
+                  const _SectionTitle('Classroom scores'),
+                  ClassroomBarChart(
+                    entries: [
+                      for (final c in rated)
+                        MapEntry(c.roomNumber, dataService.averageScore(c.id)!),
                     ],
                   ),
                   const _SectionTitle('Highest-rated classrooms'),
