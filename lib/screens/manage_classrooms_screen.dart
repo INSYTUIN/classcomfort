@@ -26,7 +26,7 @@ class ManageClassroomsScreen extends StatelessWidget {
         ],
       ),
     );
-    if (confirmed == true) dataService.removeClassroom(room.id);
+    if (confirmed == true) await dataService.removeClassroom(room.id);
   }
 
   @override
@@ -58,7 +58,7 @@ class ManageClassroomsScreen extends StatelessWidget {
                     title: Text(room.fullName),
                     subtitle: Text(
                       'Capacity: ${room.capacity} · '
-                      '${dataService.ratingsFor(room.id).length} evaluation(s)',
+                          '${dataService.ratingsFor(room.id).length} evaluation(s)',
                     ),
                     trailing: IconButton(
                       icon: const Icon(Icons.delete, color: Colors.red),
@@ -96,7 +96,7 @@ class _AddClassroomDialogState extends State<_AddClassroomDialog> {
     super.dispose();
   }
 
-  void _save() {
+  Future<void> _save() async {
     final building = _buildingController.text.trim();
     final room = _roomController.text.trim();
     final capacity = int.tryParse(_capacityController.text.trim());
@@ -106,11 +106,12 @@ class _AddClassroomDialogState extends State<_AddClassroomDialog> {
       return;
     }
 
-    final added = dataService.addClassroom(
+    final added = await dataService.addClassroom(
       building: building,
       roomNumber: room,
       capacity: capacity,
     );
+    if (!mounted) return;
     if (!added) {
       setState(() => _error = 'That classroom already exists.');
       return;

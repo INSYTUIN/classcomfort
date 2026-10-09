@@ -14,7 +14,10 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  bool _registering = false; // false = log in, true = create account
+  bool _busy = false;
   String? _error;
+  String? _info;
 
   @override
   void dispose() {
@@ -23,20 +26,65 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  void _login() {
-    final ok = dataService.login(_emailController.text, _passwordController.text);
-    if (!ok) {
-      setState(() => _error = 'Invalid email or password');
+  Future<void> _submit() async {
+    setState(() {
+      _busy = true;
+      _error = null;
+      _info = null;
+    });
+
+    final email = _emailController.text;
+    final password = _passwordController.text;
+    final error = _registering
+        ? await dataService.register(email, password)
+        : await dataService.login(email, password);
+    if (!mounted) return;
+
+    if (error != null) {
+      setState(() {
+        _busy = false;
+        _error = error;
+      });
       return;
     }
+
+    if (_registering) {
+      setState(() {
+        _busy = false;
+        _registering = false;
+        _info = 'Account created! We sent a verification link to your email. '
+            'Open it, then log in here.';
+      });
+      return;
+    }
+
     // Students go to the rating screens, admins go to the dashboard.
     final isAdmin = dataService.currentUser!.role == UserRole.admin;
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(
         builder: (_) =>
-            isAdmin ? const AdminDashboardScreen() : const StudentHomeScreen(),
+        isAdmin ? const AdminDashboardScreen() : const StudentHomeScreen(),
       ),
     );
+  }
+
+  Future<void> _forgotPassword() async {
+    setState(() {
+      _busy = true;
+      _error = null;
+      _info = null;
+    });
+    final error = await dataService.sendPasswordReset(_emailController.text);
+    if (!mounted) return;
+    setState(() {
+      _busy = false;
+      if (error != null) {
+        _error = error;
+      } else {
+        _info = 'If an account exists for that email, we sent a password '
+            'reset link. Check your inbox (and spam folder).';
+      }
+    });
   }
 
   @override
@@ -63,6 +111,14 @@ class _LoginScreenState extends State<LoginScreen> {
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 24),
+                if (_registering && DataService.allowedEmailDomain.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Text(
+                      'Use your school email (@${DataService.allowedEmailDomain})',
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
                 TextField(
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
@@ -75,24 +131,52 @@ class _LoginScreenState extends State<LoginScreen> {
                 TextField(
                   controller: _passwordController,
                   obscureText: true,
-                  onSubmitted: (_) => _login(),
+                  onSubmitted: (_) => _busy ? null : _submit(),
                   decoration: const InputDecoration(
                     labelText: 'Password',
                     border: OutlineInputBorder(),
                   ),
                 ),
+                if (!_registering)
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: _busy ? null : _forgotPassword,
+                      child: const Text('Forgot password?'),
+                    ),
+                  ),
                 if (_error != null)
                   Padding(
-                    padding: const EdgeInsets.only(top: 8),
+                    padding: const EdgeInsets.only(top: 12),
                     child: Text(_error!, style: const TextStyle(color: Colors.red)),
                   ),
+                if (_info != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 12),
+                    child: Text(_info!, style: TextStyle(color: Colors.green.shade700)),
+                  ),
                 const SizedBox(height: 16),
-                FilledButton(onPressed: _login, child: const Text('Log In')),
-                const SizedBox(height: 24),
-                const Text(
-                  'Demo accounts\nstudent@school.edu / 1234\nadmin@school.edu / admin',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.grey),
+                FilledButton(
+                  onPressed: _busy ? null : _submit,
+                  child: Text(
+                    _busy
+                        ? 'Please wait...'
+                        : (_registering ? 'Create Student Account' : 'Log In'),
+                  ),
+                ),
+                TextButton(
+                  onPressed: _busy
+                      ? null
+                      : () => setState(() {
+                    _registering = !_registering;
+                    _error = null;
+                    _info = null;
+                  }),
+                  child: Text(
+                    _registering
+                        ? 'Already have an account? Log in'
+                        : 'New student? Create an account',
+                  ),
                 ),
               ],
             ),

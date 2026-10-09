@@ -18,6 +18,7 @@ class _RateClassroomScreenState extends State<RateClassroomScreen> {
   // 0 = not rated yet
   final Map<String, int> _scores = {for (final f in factors) f: 0};
   final _commentController = TextEditingController();
+  bool _saving = false;
 
   bool get _allRated => _scores.values.every((v) => v > 0);
 
@@ -27,12 +28,23 @@ class _RateClassroomScreenState extends State<RateClassroomScreen> {
     super.dispose();
   }
 
-  void _submit() {
-    dataService.submitRating(
-      classroomId: widget.classroom.id,
-      scores: Map.of(_scores),
-      comment: _commentController.text,
-    );
+  Future<void> _submit() async {
+    setState(() => _saving = true);
+    try {
+      await dataService.submitRating(
+        classroomId: widget.classroom.id,
+        scores: Map.of(_scores),
+        comment: _commentController.text,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _saving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not save your rating: $e')),
+      );
+      return;
+    }
+    if (!mounted) return;
     final messenger = ScaffoldMessenger.of(context);
     Navigator.of(context).pop();
     messenger.showSnackBar(
@@ -78,6 +90,7 @@ class _RateClassroomScreenState extends State<RateClassroomScreen> {
           TextField(
             controller: _commentController,
             maxLines: 3,
+            maxLength: 500,
             decoration: const InputDecoration(
               labelText: 'Feedback (optional)',
               border: OutlineInputBorder(),
@@ -89,13 +102,13 @@ class _RateClassroomScreenState extends State<RateClassroomScreen> {
               padding: const EdgeInsets.only(bottom: 12),
               child: Text(
                 'Your score: ${calculateScore(_scores).toStringAsFixed(2)} / 5.00 '
-                '(${classify(calculateScore(_scores))})',
+                    '(${classify(calculateScore(_scores))})',
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.titleMedium,
               ),
             ),
           FilledButton(
-            onPressed: _allRated ? _submit : null,
+            onPressed: _allRated && !_saving ? _submit : null,
             child: const Text('Submit Rating'),
           ),
           if (!_allRated)
