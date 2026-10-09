@@ -21,7 +21,7 @@ class ClassComfortApp extends StatelessWidget {
     return MaterialApp(
       title: 'ClassComfort',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(colorSchemeSeed: Colors.teal, useMaterial3: true),
+      theme: ThemeData(colorSchemeSeed: Colors.blue, useMaterial3: true),
       home: const AuthGate(),
     );
   }

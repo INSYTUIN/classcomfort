@@ -87,6 +87,8 @@ class _LoginScreenState extends State<LoginScreen> {
     });
   }
 
+  bool _isObscured = true;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -130,11 +132,22 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 12),
                 TextField(
                   controller: _passwordController,
-                  obscureText: true,
+                  obscureText: _isObscured, // 2. Bind to the state variable
                   onSubmitted: (_) => _busy ? null : _submit(),
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: 'Password',
-                    border: OutlineInputBorder(),
+                    border: const OutlineInputBorder(),
+                    // 3. Add the toggle button
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _isObscured ? Icons.visibility : Icons.visibility_off,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _isObscured = !_isObscured; // 4. Toggle the state and rebuild
+                        });
+                      },
+                    ),
                   ),
                 ),
                 if (!_registering)
