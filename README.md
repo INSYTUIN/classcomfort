@@ -109,6 +109,5 @@ Then add this line to the `verified()` function in `firestore.rules` so the serv
 
 ## Not built yet
 
-- Charts and trends over time
 - Exporting a support report
 - Limiting each student to one rating per room per day
